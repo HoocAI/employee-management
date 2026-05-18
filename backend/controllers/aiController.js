@@ -1,5 +1,3 @@
-const OpenAI = require('openai');
-
 const recommendAI = async (req, res) => {
   try {
     const { employees } = req.body;
@@ -8,36 +6,45 @@ const recommendAI = async (req, res) => {
       return res.status(400).json({ message: 'Employees array is required for AI recommendation' });
     }
 
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENROUTER_BASE_URL || 'https://api.openai.com/v1',
+    // MOCK AI LOGIC FOR EXAM
+    const promotions = [];
+    const rankings = [];
+    const training = [];
+    const feedback = [];
+
+    // Sort employees by performance score descending for rankings
+    const sortedEmployees = [...employees].sort((a, b) => b.performanceScore - a.performanceScore);
+    sortedEmployees.forEach((emp, index) => {
+      rankings.push(`${index + 1}. ${emp.name} (Score: ${emp.performanceScore})`);
+      
+      if (emp.performanceScore >= 85) {
+        promotions.push(`${emp.name} is highly recommended for promotion due to outstanding performance score of ${emp.performanceScore}.`);
+      }
+      
+      if (emp.performanceScore < 70) {
+        feedback.push(`${emp.name} needs to improve performance. Current score is ${emp.performanceScore}. Consider setting clearer KPIs.`);
+      }
+
+      if (!emp.skills || emp.skills.length < 3) {
+        training.push(`${emp.name} should enroll in upskilling courses to broaden technical stack.`);
+      }
     });
 
-    const prompt = `
-    Analyze the following employees and provide:
-    1. Promotion Recommendations (for high performance score >= 85).
-    2. Employee Rankings (if multiple).
-    3. Training Suggestions (based on missing skills or lower scores).
-    4. Feedback Generation (improvement feedback for lower scores < 70).
-    
-    Employees data:
-    ${JSON.stringify(employees, null, 2)}
-    
-    Return the response as a structured JSON object with keys: 
-    - "promotions": [array of employee names and reasons],
-    - "rankings": [ordered list of employee names],
-    - "training": [array of suggestions],
-    - "feedback": [array of employee specific feedback]
-    `;
+    // Add a generic training suggestion if none matched
+    if (training.length === 0) {
+      training.push('All evaluated employees are well-equipped, but continuous learning is encouraged.');
+    }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // Default placeholder model, works for OpenAI and OpenRouter if routed. For OpenRouter, "openai/gpt-3.5-turbo" might be needed, but let's stick to gpt-3.5-turbo.
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-    });
-
-    const aiOutput = JSON.parse(completion.choices[0].message.content);
-    res.json(aiOutput);
+    // Add a simulated delay of 1.5 seconds to mimic an AI API call
+    setTimeout(() => {
+      res.json({
+        promotions,
+        rankings,
+        training,
+        feedback
+      });
+    }, 1500);
+    
   } catch (error) {
     console.error('AI Error:', error);
     res.status(500).json({ message: 'Error generating AI recommendations', error: error.message });
